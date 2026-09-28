@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""ICASSP 2027 Section 5.3: 12-class isolated-source recognition, 20–48 kHz.
+"""Recording-level 12-class isolated-source recognition, 20–48 kHz.
 
-Keep ICASSP2027_experiment_5_1_rf_cnn6.py in the same directory. This script
+Keep isolated_rf_cnn6.py in the same directory. This script
 reuses its 96-kHz full-band activity selection and CNN6 training schedule,
 but masks all STFT power bins below 20 kHz before the model input. No 44.1-kHz
 audio or 96LP control is relevant to this 96-kHz ultrasonic-only experiment.
@@ -11,13 +11,13 @@ excluded, including when it is an independent rendition of song 2. Each
 recording is assigned before its windows are extracted. The same evaluation
 windows are used for all three seeds, with evaluation after fixed epoch 50.
 
-The paper's experiment uses CNN6. Pass --models rf,cnn6 for an additional
+The default experiment uses CNN6. Pass --models rf,cnn6 for an additional
 exploratory RF comparison using 2-kHz linear bands across 20–48 kHz.
 
 Example:
-    python ICASSP2027_experiment_5_3_ultrasonic12.py \
+    python ultrasonic12_cnn6.py \
       --train96 /content/drive/MyDrive/train_96 \
-      --output /content/drive/MyDrive/ICASSP_2027/experiment_5_3 --audit-only
+      --output /content/drive/MyDrive/ultrasonic_mir_runs/experiment_5_3 --audit-only
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-import ICASSP2027_experiment_5_1_rf_cnn6 as core
+import isolated_rf_cnn6 as core
 
 
 TWELVE_INSTRUMENTS = tuple(name for name in core.INSTRUMENTS
@@ -102,7 +102,7 @@ def main() -> None:
                      for k, v in asdict(cfg).items()}
     configuration.update({"classes": TWELVE_INSTRUMENTS,
         "frequency_band_hz": [20000, 48000], "experiment": "section_5_3",
-        "note": "Original PDF scores require an actual run on audited raw audio."})
+        "note": "Reported scores require an actual run on audited audio."})
     (run_dir / "config.json").write_text(json.dumps(configuration, indent=2), encoding="utf-8")
     overall, per_class = [], []
     if "rf" in models:

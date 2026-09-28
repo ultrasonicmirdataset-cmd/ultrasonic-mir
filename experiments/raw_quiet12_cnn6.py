@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ICASSP 2027 quiet-window control: 12 classes, 96-kHz raw recordings.
+"""Raw quiet-window control: 12 classes, 96-kHz raw recordings.
 
 The gate is a 0.5-s, full-band RMS strictly below -80 dBFS, computed
 across all channels and samples. Entirely digital-zero windows are excluded.
@@ -11,20 +11,20 @@ family; studio filenames do not reliably encode song numbers. There must be
 train and evaluation recordings for every class, and tracks 3 and 6 must
 both occur among the held-out recordings. This script never alters input data.
 
-Keep ICASSP2027_experiment_5_1_rf_cnn6.py and
-ICASSP2027_experiment_5_3_ultrasonic12.py next to this script. In Colab:
+Keep isolated_rf_cnn6.py and
+ultrasonic12_cnn6.py next to this script. In Colab:
     !pip install numpy scipy scikit-learn soundfile torch
-    !python ICASSP2027_experiment_5_4_raw_quiet12.py \\
+    !python raw_quiet12_cnn6.py \\
       --raw-root /content/drive/MyDrive/valid_96 \\
       --create-map-template /content/raw_track_map.json
     # Fill in each null "track" with the verified song ID, e.g. "3".
-    !python ICASSP2027_experiment_5_4_raw_quiet12.py \\
+    !python raw_quiet12_cnn6.py \\
       --raw-root /content/drive/MyDrive/valid_96 \\
       --track-map /content/raw_track_map.json --audit-only
-    !python ICASSP2027_experiment_5_4_raw_quiet12.py \\
+    !python raw_quiet12_cnn6.py \\
       --raw-root /content/drive/MyDrive/valid_96 \\
       --track-map /content/raw_track_map.json \\
-      --output /content/drive/MyDrive/ICASSP_2027/experiment_5_4
+      --output /content/drive/MyDrive/ultrasonic_mir_runs/experiment_5_4
 """
 
 from __future__ import annotations
@@ -40,8 +40,8 @@ from typing import Any
 
 import numpy as np
 
-import ICASSP2027_experiment_5_1_rf_cnn6 as core
-from ICASSP2027_experiment_5_3_ultrasonic12 import TWELVE_INSTRUMENTS
+import isolated_rf_cnn6 as core
+from ultrasonic12_cnn6 import TWELVE_INSTRUMENTS
 
 
 RAW_FOLDER_ALIASES: dict[str, tuple[str, ...]] = {
@@ -92,7 +92,7 @@ def catalog_raw(root: Path) -> tuple[dict[str, list[Path]], list[str]]:
 
 
 def template(root: Path, catalog: dict[str, list[Path]]) -> dict[str, Any]:
-    return {"schema": "ICASSP2027-raw-song-map-v1",
+    return {"schema": "raw-song-map-v1",
             "instructions": "For every file, replace null with its verified track ID: 1,2,3,4,5,6 or 2.2 (excluded). Never infer from filename order.",
             "entries": [{"instrument": label, "relative_path": str(path.relative_to(root)),
                          "track": None}
@@ -103,8 +103,12 @@ def template(root: Path, catalog: dict[str, list[Path]]) -> dict[str, Any]:
 def assignments(root: Path, catalog: dict[str, list[Path]], map_path: Path
                ) -> tuple[list[dict[str, Any]], list[str]]:
     content = json.loads(map_path.read_text(encoding="utf-8"))
-    if content.get("schema") != "ICASSP2027-raw-song-map-v1" or not isinstance(content.get("entries"), list):
-        raise ValueError("Track map must use the generated ICASSP2027-raw-song-map-v1 schema")
+    schema = content.get("schema")
+    # Accept earlier prefixed v1 maps while generating a generic schema now.
+    if (not isinstance(schema, str) or
+            not (schema == "raw-song-map-v1" or schema.endswith("-raw-song-map-v1")) or
+            not isinstance(content.get("entries"), list)):
+        raise ValueError("Track map must use the generated raw-song-map-v1 schema")
     known = {str(path.relative_to(root)): (label, path) for label, paths in catalog.items()
              for path in paths}
     issues: list[str] = []
@@ -259,7 +263,7 @@ def assess(run_dir: Path, overall: list[dict[str, Any]]) -> None:
         "heldout_accuracy_by_seed": {str(row["seed"]): row["accuracy"] for row in overall},
         "mean_heldout_accuracy": mean, "chance_accuracy": chance,
         "difference_from_uniform_chance": mean - chance,
-        "interpretation": "Compare each seed and class with uniform chance; the paper does not specify a numerical threshold for near-chance performance. Training-loss convergence and held-out generalization are distinct; check the saved epoch history as well.",
+        "interpretation": "Compare each seed and class with uniform chance; no numerical threshold is imposed for near-chance performance. Training-loss convergence and held-out generalization are distinct; check the saved epoch history as well.",
     }
     (run_dir / "quiet_control_assessment.json").write_text(
         json.dumps(result, indent=2), encoding="utf-8")

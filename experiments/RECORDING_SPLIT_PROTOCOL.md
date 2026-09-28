@@ -1,4 +1,4 @@
-# ICASSP 2027 recording-disjoint experiments
+# Recording-level instrument classification
 
 This is a new version of the instrument-classification experiments, placed
 directly in `experiments/`. The earlier repository entry points remain in
@@ -12,17 +12,14 @@ notebook runs in Colab and installs its extra dependencies in its first cell.
 
 | Task / implementation | Entry point | Train families | Held-out families | Classes / input |
 | --- | --- | --- | --- | --- |
-| Section 5.1: isolated RF and CNN6 | `ICASSP2027_experiment_5_1_rf_cnn6.py` | 1, 3, 4, 5 | 2, 6 | 15; paired 44.1 kS/s, full 96 kS/s, 96 kS/s LP at 22.05 kHz |
-| Section 5.3: ultrasonic-only | `ICASSP2027_experiment_5_3_ultrasonic12.py` | 1, 3, 4, 5 | 2, 6 | 12; 96 kS/s, bins strictly above 20 kHz; no Bansury, electric guitar, or piano |
-| Section 5.3 artifact control: raw quiet | `ICASSP2027_experiment_5_4_raw_quiet12.py` | 1, 2, 4, 5 | 3, 6 | Same 12 labels as ultrasonic-only; full-band raw RMS strictly below -80 dBFS, non-digital-zero; CNN6 sees only bins above 20 kHz |
-| Section 5.2: polyphonic ON/OFF | `ICASSP2027_polyphonic_CNN6_recording_disjoint.ipynb` | Other selected families | Selected family | One target per run; 44k, 96k_full, or 96k_lp22 |
+| Isolated RF and CNN6 | `isolated_rf_cnn6.py` | 1, 3, 4, 5 | 2, 6 | 15; paired 44.1 kS/s, full 96 kS/s, 96 kS/s LP at 22.05 kHz |
+| Ultrasonic-only | `ultrasonic12_cnn6.py` | 1, 3, 4, 5 | 2, 6 | 12; 96 kS/s, bins strictly above 20 kHz; no Bansury, electric guitar, or piano |
+| Raw quiet-window control | `raw_quiet12_cnn6.py` | 1, 2, 4, 5 | 3, 6 | Same 12 labels as ultrasonic-only; full-band raw RMS strictly below -80 dBFS, non-digital-zero; CNN6 sees only bins above 20 kHz |
+| Polyphonic ON/OFF | `polyphonic_cnn6_recording_disjoint.ipynb` | Other selected families | Selected family | One target per run; 44k, 96k_full, or 96k_lp22 |
 
-The manuscript's Section 5.3 describes recording-level separation for the
-quiet control without separately stating its class count or track IDs. This
-implementation uses the same 12 labels as the ultrasonic-only experiment,
-with the previously requested quiet-control validation families 3 and 6
-(ultrasonic-only uses 2 and 6). It computes the actual score; it does not
-presuppose the chance-level result reported in the manuscript.
+The quiet control uses the same 12 labels as the ultrasonic-only experiment,
+with validation families 3 and 6 (ultrasonic-only uses 2 and 6). It computes
+the actual score without assuming a chance-level result.
 
 Track 2.2 is excluded throughout. Recording families are assigned before
 extracting any half-second windows. For CNN6, the code trains to a fixed
@@ -38,15 +35,15 @@ After mounting the audio in Colab or making authorized local copies, first
 audit the input folders. Use an output folder separate from the recordings:
 
 ```bash
-python ICASSP2027_experiment_5_1_rf_cnn6.py \
+python isolated_rf_cnn6.py \
   --train96 /path/to/train_96 --derive44 \
-  --output /path/to/results/section_5_1 --audit-only
+  --output /path/to/results/isolated --audit-only
 
-python ICASSP2027_experiment_5_3_ultrasonic12.py \
+python ultrasonic12_cnn6.py \
   --train96 /path/to/train_96 \
-  --output /path/to/results/section_5_3 --audit-only
+  --output /path/to/results/ultrasonic12 --audit-only
 
-python ICASSP2027_experiment_5_4_raw_quiet12.py \
+python raw_quiet12_cnn6.py \
   --raw-root /path/to/valid_96 \
   --create-map-template /path/to/raw_track_map.json
 ```
@@ -56,7 +53,7 @@ every included file across the 12 selected labels; do not infer a family
 from the raw filename or its sort order. Then run the quiet preflight:
 
 ```bash
-python ICASSP2027_experiment_5_4_raw_quiet12.py \
+python raw_quiet12_cnn6.py \
   --raw-root /path/to/valid_96 --track-map /path/to/raw_track_map.json \
   --output /path/to/results/raw_quiet --audit-only
 ```
@@ -72,7 +69,7 @@ zero-fraction, zero-run, or duplicate-window filters. It reports actual
 held-out accuracy and epoch-by-epoch training loss, without assuming a
 chance-level result.
 
-The paper's 44.1-kS/s condition is derived from the *same* native 96-kS/s
+The 44.1-kS/s condition is derived from the *same* native 96-kS/s
 audio. The documented `--derive44` option enforces that pairing digitally.
 If you instead use `--train44`, the code currently checks track IDs, sample
 rates, and duration agreement only: verify waveform pairing separately
@@ -85,16 +82,16 @@ For the polyphonic notebook, set one target in `SELECTED_INSTRUMENTS`, choose
 `RUN_SEED`, and set or disable target-specific hard negatives. Hold the
 validation family and augmentation settings fixed across 44k, 96k_full, and
 96k_lp22 for each target. Its isolated-stem pretraining and hard-negative
-mixtures are implementation choices that should be documented with any paper
-results attributed to this version. Run and aggregate all reported targets
-and seeds before comparing with the manuscript table.
+mixtures are implementation choices that should be documented with any
+reported results. Run and aggregate all targets and seeds before comparing
+results across configurations.
 
 ## Readiness and provenance
 
 The three scripts compiled, the notebook's function and configuration cells
 executed, and the RF entry points completed synthetic-data runs. All three
 CNN6 entry points also completed a one-epoch CPU smoke run on synthetic data,
-including every advertised bandwidth for Section 5.1. This checks runtime
+including every advertised isolated-classification bandwidth. This checks runtime
 paths, not a full training job. CNN6 and the polyphonic notebook have **not**
 been trained on the full real dataset under this protocol. One actual isolated
 `train_96/Acoustic_guitar/1` WAV was decoded at 96 kS/s: the activity scan
@@ -106,8 +103,8 @@ authenticated full-file read here, so the quiet-window gate has only been
 tested end to end on synthetic audio. The Drive inventory
 checked on September 28, 2026 includes newly uploaded `Bansury` take 5 and
 `Vocals` take 2. At the file-metadata level, all 15 classes now have train
-and evaluation takes in `train_96` for Section 5.1, as do the 12 classes in
-Section 5.3. Audio readability, activity-window counts, and independence of
+and evaluation takes in `train_96` for isolated classification, as do the 12
+classes in ultrasonic-only classification. Audio readability, activity-window counts, and independence of
 the new takes have not been verified. Drive revision metadata lists their
 original filenames as `עותק של bansury_2.2` for `bansury_5` and
 `עותק של vocals_2.2` for `vocals_2`; both pairs have matching byte sizes.
@@ -119,7 +116,7 @@ establish recording family 3/6. The 12 selected
 classes each have at least two raw filenames at the latest inventory check,
 but a verified map and eligible quiet-window counts remain outstanding.
 Some filenames prefixed `עותק של` ("copy of") also need independence checked
-before treating pairs as separate takes. The 5.1 and 5.3 `--audit-only`
+before treating pairs as separate takes. The isolated and ultrasonic `--audit-only`
 flags check file metadata and split coverage, while a training run also scans
 windows for sufficient active examples. Do not describe the
 previously reported percentages or runs using within-recording temporal

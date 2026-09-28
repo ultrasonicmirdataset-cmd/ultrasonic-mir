@@ -1,7 +1,7 @@
 # Extended 96-kS/s experiments
 
 This directory holds the earlier extended experiments from the project's 96K
-workspace, the updated ICASSP 2027 recording-disjoint implementations, and a
+workspace, updated recording-disjoint implementations, and a
 diagnostic notebook for instrument playing time. The original ultrasonic
 analysis, PANN classification and NMF source-separation tools are documented
 in the [repository README](../README.md). The recordings, checkpoints and
@@ -9,23 +9,21 @@ large result bundles are not included in this repository. Run the scripts on
 authorized local copies or a mounted Drive and keep outputs outside the input
 audio directories.
 
-## Updated ICASSP 2027 entry points
+## Recording-disjoint entry points
 
 These files are placed **directly in `experiments/`**. The older entry points
-below remain available. See [the detailed protocol](ICASSP2027_PROTOCOL.md)
+below remain available. See [the detailed protocol](RECORDING_SPLIT_PROTOCOL.md)
 for exact requirements, flags, audits and interpretation limits.
 
 | Task | Entry point | Recording families and input |
 | --- | --- | --- |
-| 5.1: isolated RF and CNN6, 15 classes | [`ICASSP2027_experiment_5_1_rf_cnn6.py`](ICASSP2027_experiment_5_1_rf_cnn6.py) | Train 1, 3, 4, 5; evaluate 2, 6. Paired 44.1-kS/s, 96-kS/s full band, and 96-kS/s low-pass at 22.05 kHz. |
-| 5.2: polyphonic ON/OFF CNN6 | [`ICASSP2027_polyphonic_CNN6_recording_disjoint.ipynb`](ICASSP2027_polyphonic_CNN6_recording_disjoint.ipynb) | Choose one target instrument and one independent validation song family per run; choose 44k, 96k_full, or 96k_lp22 and optional hard negatives. |
-| 5.3: ultrasonic-only CNN6, 12 classes | [`ICASSP2027_experiment_5_3_ultrasonic12.py`](ICASSP2027_experiment_5_3_ultrasonic12.py) | Train 1, 3, 4, 5; evaluate 2, 6; 96-kS/s signal above 20 kHz. Excludes `Bansury`, `Electric_guitar`, and `Piano`. |
-| 5.3: raw quiet-window control, 12 classes | [`ICASSP2027_experiment_5_4_raw_quiet12.py`](ICASSP2027_experiment_5_4_raw_quiet12.py) | The same 12 labels as ultrasonic-only; train 1, 2, 4, 5; evaluate 3, 6; unedited `valid_96` audio with a verified recording-family map; full-band RMS gate and ultrasonic CNN6 input. |
+| Isolated RF and CNN6, 15 classes | [`isolated_rf_cnn6.py`](isolated_rf_cnn6.py) | Train 1, 3, 4, 5; evaluate 2, 6. Paired 44.1-kS/s, 96-kS/s full band, and 96-kS/s low-pass at 22.05 kHz. |
+| Polyphonic ON/OFF CNN6 | [`polyphonic_cnn6_recording_disjoint.ipynb`](polyphonic_cnn6_recording_disjoint.ipynb) | Choose one target instrument and one independent validation song family per run; choose 44k, 96k_full, or 96k_lp22 and optional hard negatives. |
+| Ultrasonic-only CNN6, 12 classes | [`ultrasonic12_cnn6.py`](ultrasonic12_cnn6.py) | Train 1, 3, 4, 5; evaluate 2, 6; 96-kS/s signal above 20 kHz. Excludes `Bansury`, `Electric_guitar`, and `Piano`. |
+| Raw quiet-window control, 12 classes | [`raw_quiet12_cnn6.py`](raw_quiet12_cnn6.py) | The same 12 labels as ultrasonic-only; train 1, 2, 4, 5; evaluate 3, 6; unedited `valid_96` audio with a verified recording-family map; full-band RMS gate and ultrasonic CNN6 input. |
 
-The manuscript's Section 5.3 describes recording-level separation for the
-quiet control but does not separately name its class count or track numbers.
-The updated script uses the same 12 labels as the ultrasonic-only experiment
-and the previously requested held-out families 3 and 6, whereas the
+The quiet-window control uses the same 12 labels as the ultrasonic-only experiment
+and held-out families 3 and 6, whereas the
 ultrasonic-only script holds out 2 and 6. It tests whether quiet raw windows
 still carry class-specific ultrasonic cues, without assuming that held-out
 accuracy is at chance level.
@@ -37,16 +35,16 @@ notebook selects only song IDs 1–6. If `song_ids` is reconfigured to include
 a 22.05-kHz low-pass because those
 inputs have no >20-kHz content. The quiet control also takes 96-kS/s raw
 audio and extracts >20-kHz content. The polyphonic comparison supports all
-three bandwidth settings. The 5.1 and 5.3 class sets and audio selection
+three bandwidth settings. The isolated and ultrasonic-only class sets and audio selection
 criteria differ, so their results are not interchangeable.
 
-Run the [audits](ICASSP2027_PROTOCOL.md#commands) before training. For the
-5.1 and 5.3 scripts, `--audit-only` checks the available recordings and their
+Run the [audits](RECORDING_SPLIT_PROTOCOL.md#commands) before training. For the
+isolated and ultrasonic-only scripts, `--audit-only` checks the available recordings and their
 metadata; it does not check that every class has usable active 0.5-s windows.
 The `train_96` inventory checked on September 28, 2026 includes the newly
 uploaded `Bansury` take 5 and `Vocals` take 2. Thus all 15 classes have a
-training and held-out recording for the proposed 5.1 split, and the 12
-classes have coverage for 5.3 at the filename level. The new takes have not
+training and held-out recording for the isolated split, and the 12
+classes have coverage for the ultrasonic-only split at the filename level. The new takes have not
 been decoded or checked for independence. Drive revision metadata lists the
 original filenames of `bansury_5` and `vocals_2` as copies of `bansury_2.2`
 and `vocals_2.2`, respectively, with matching byte counts. Verify the actual
@@ -175,8 +173,8 @@ python experiments/random_forest/classic_instrument_rf_timestamped.py \
 Use `--audit-only` to inspect the inventory before computing features or
 training. The inspected completed run used fifteen labels and a guarded
 **temporal split within each stem**, not a recording-disjoint split. This is a
-material difference from the current paper's Section 3 description and must
-be reconciled before claiming exact paper reproduction. The code itself warns
+material difference from the recording-disjoint protocol above and must
+be reconciled before treating these scores as held-out-recording results. The code itself warns
 that some classes lack the independent song families needed for a fully
 recording-disjoint fifteen-class test.
 
@@ -185,7 +183,7 @@ recording-disjoint fifteen-class test.
 The historical thirteen-class ultrasonic run, three-class stem quiet run,
 and RF run are distinct experiments with different class sets and splits. Do
 not pool their scores or use their tables as the twelve-class or raw-recording
-results. The manuscript's recording-disjoint claims require new full-data runs
+results. Recording-disjoint conclusions require new full-data runs
 of the updated entry points above, with audited manifests; earlier within-stem
 splits cannot establish that protocol. No new numerical results are claimed by
 importing this code.

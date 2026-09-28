@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""ICASSP 2027, Section 5.1: isolated-source classification (15 classes).
+"""Recording-level isolated-source classification (15 classes).
 
 Run on the extracted local/Colab copies of train_96 and train_44, never on
 Drive URLs. This script writes results only to --output, never to the inputs.
 
 Example (after mounting Google Drive in Colab):
     !pip install numpy scipy scikit-learn soundfile torch
-    !python ICASSP2027_experiment_5_1_rf_cnn6.py \
+    !python isolated_rf_cnn6.py \
         --train96 '/content/drive/MyDrive/train_96' \
         --train44 '/content/drive/MyDrive/train_44' \
-        --output '/content/drive/MyDrive/ICASSP_2027/experiment_5_1'
+        --output '/content/drive/MyDrive/ultrasonic_mir_runs/experiment_5_1'
 
 First run with --audit-only. The proposed split is whole tracks 1,3,4,5 for
 training; 2,6 for evaluation; and 2.2 entirely excluded. Thus all windows
@@ -19,13 +19,13 @@ IDs. Conditions: native 44.1-kHz, full-band 96-kHz, and 96-kHz low-pass at
 22.05 kHz. --derive44 resamples *every* 44.1-kHz window from its 96-kHz
 master if the provided train_44 directory cannot be verified as paired.
 
-The PDF describes a 200-tree RF on up to 300/150 balanced 0.5-s windows,
+The defaults use a 200-tree RF on up to 300/150 balanced 0.5-s windows,
 32/8-ms linear STFT, fixed 2-kHz bands up to 40 kHz and three seeds. CNN6
-uses the paper's 4 x 5x5 convolution blocks, per-frequency BN, frequency
+uses four 5x5 convolution blocks, per-frequency BN, frequency
 average, temporal max+mean, 512-dimensional embedding and fixed 50 epochs.
 Only the final epoch is evaluated; evaluation does not select checkpoints.
 The -70 dBFS full-band RMS activity rule comes from the earlier Drive code;
-it is unrelated to the paper's descriptive ultrasonic-noise criterion.
+it does not set the ultrasonic-noise visualization threshold.
 
 Requirements: Python >=3.10, numpy, scipy, scikit-learn, soundfile (preferred),
 torch (only for CNN6). PCM WAVs also work through Python's built-in wave
@@ -766,7 +766,7 @@ def main() -> None:
                      for key, value in asdict(cfg).items()},
                   "train_tracks": TRAIN_TRACKS, "eval_tracks": EVAL_TRACKS,
                   "excluded_tracks": EXCLUDED_TRACKS, "classes": INSTRUMENTS,
-                  "note": "Independent rerun; historical paper percentages are not assumed."}
+                  "note": "Independent rerun; previous reported percentages are not assumed."}
     (run_dir / "config.json").write_text(json.dumps(run_config, indent=2), encoding="utf-8")
     overall: list[dict[str, Any]] = []
     per_class: list[dict[str, Any]] = []
@@ -781,7 +781,7 @@ def main() -> None:
     write_csv(run_dir / "summary_per_instrument_mean_sd.csv",
               summarize(per_class, ("model", "condition", "instrument"),
                         ("precision", "recall", "f1")))
-    print(f"Section 5.1 results: {run_dir}")
+    print(f"Isolated-classification results: {run_dir}")
 
 
 if __name__ == "__main__":
